@@ -6,9 +6,26 @@
 #include <errno.h>
 #include <getopt.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+static void log_fd(int fd, const char *fmt, ...) {
+    char buffer[256];
+    va_list args;
+    va_start(args, fmt);
+    int written = vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+    if (written < 0) {
+        return;
+    }
+    size_t len = (size_t)written;
+    if (len >= sizeof(buffer)) {
+        len = sizeof(buffer) - 1;
+    }
+    utils_write_all(fd, buffer, len);
+}
 
 static void usage(const char *progname) {
     static const char help_tail[] =
@@ -162,6 +179,7 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
+    proto_message_t reply;
     if (tadmor_receive_reply(&conn, &reply) != 0) {
         log_fd(STDERR_FILENO, "tadmor: lecture de la réponse impossible (%s)\n", strerror(errno));
         tadmor_close(&conn);
