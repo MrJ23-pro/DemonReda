@@ -311,6 +311,7 @@ int tadmor_parse_args(int argc, char **argv, tadmor_options_t *opts) {
                     opts->commands = tmp;
                 }
                 opts->commands[cmd_count++] = current;
+                opts->command_count = cmd_count;
                 memset(&current, 0, sizeof(current));
                 current.argv = calloc(ERRAID_MAX_COMMAND_ARGS + 1, sizeof(char *));
                 if (current.argv == NULL) {
