@@ -828,7 +828,9 @@ int storage_load_tasks(const storage_paths_t *paths, task_t **tasks_out, size_t 
 static int write_task_file(const storage_paths_t *paths, const task_t *task, const char *final_path) {
     (void)paths;
     char tmp_path[PATH_MAX];
-    if (utils_join_path(final_path, ".tmp", tmp_path, sizeof(tmp_path)) != 0) {
+    int n = snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", final_path);
+    if (n < 0 || (size_t)n >= sizeof(tmp_path)) {
+        errno = ENAMETOOLONG;
         return -1;
     }
 
