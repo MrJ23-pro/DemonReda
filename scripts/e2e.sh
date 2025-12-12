@@ -43,17 +43,37 @@ minutes_mask="0FFFFFFFFFFFFFF"
 hours_mask="00000F"
 weekdays_mask="7F"
 
-"$tadmor_bin" -p "$pipes_dir" -c -m "$minutes_mask" -H "$hours_mask" -w "$weekdays_mask" /bin/echo "hello end-to-end"
+echo "[e2e] création tâche simple"
+create_simple_output="$("$tadmor_bin" -p "$pipes_dir" -c -m "$minutes_mask" -H "$hours_mask" -w "$weekdays_mask" /bin/echo "hello end-to-end")"
+echo "$create_simple_output"
+simple_task_id="$(echo "$create_simple_output" | awk -F':' '/task_id/ {gsub(/[^0-9]/, "", $2); print $2}')"
+
+echo "[e2e] création tâche séquentielle"
+create_sequence_output="$("$tadmor_bin" -p "$pipes_dir" -s -m "$minutes_mask" -H "$hours_mask" -w "$weekdays_mask" /bin/echo "first" -- /bin/sh -c "echo second" )"
+echo "$create_sequence_output"
+sequence_task_id="$(echo "$create_sequence_output" | awk -F':' '/task_id/ {gsub(/[^0-9]/, "", $2); print $2}')"
 
 sleep 2
 
+echo "[e2e] liste des tâches"
 "$tadmor_bin" -p "$pipes_dir" -l
 
-created_task_id="$("$tadmor_bin" -p "$pipes_dir" -l | awk -F':' '/task_id/ {gsub(/[^0-9]/, "", $2); if ($2 != "") {print $2; exit}}')"
+if [ -n "$simple_task_id" ]; then
+    echo "[e2e] récupération stdout/stderr tâche simple"
+    "$tadmor_bin" -p "$pipes_dir" -o "$simple_task_id" || true
+    "$tadmor_bin" -p "$pipes_dir" -e "$simple_task_id" || true
+    echo "[e2e] historique tâche simple"
+    "$tadmor_bin" -p "$pipes_dir" -x "$simple_task_id" || true
+fi
 
-if [ "$created_task_id" != "" ]; then
-    "$tadmor_bin" -p "$pipes_dir" -x "$created_task_id" || true
-    "$tadmor_bin" -p "$pipes_dir" -r "$created_task_id" || true
+if [ -n "$sequence_task_id" ]; then
+    echo "[e2e] suppression tâche séquentielle"
+    "$tadmor_bin" -p "$pipes_dir" -r "$sequence_task_id" || true
+fi
+
+if [ -n "$simple_task_id" ]; then
+    echo "[e2e] suppression tâche simple"
+    "$tadmor_bin" -p "$pipes_dir" -r "$simple_task_id" || true
 fi
 
 "$tadmor_bin" -p "$pipes_dir" -q
