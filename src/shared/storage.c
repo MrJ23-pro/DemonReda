@@ -240,20 +240,6 @@ static int rotate_stdio_snapshot(const char *log_dir,
     }
     return 0;
 }
-        errno = ENOTDIR;
-        return -1;
-    }
-    if (errno != ENOENT) {
-        return -1;
-    }
-    if (mkdir(path, mode) != 0) {
-        if (errno == EEXIST) {
-            return 0;
-        }
-        return -1;
-    }
-    return 0;
-}
 
 static int read_file_alloc(const char *path, char **buffer_out, size_t *length_out) {
     int fd = open(path, O_RDONLY);
@@ -840,6 +826,7 @@ int storage_load_tasks(const storage_paths_t *paths, task_t **tasks_out, size_t 
 }
 
 static int write_task_file(const storage_paths_t *paths, const task_t *task, const char *final_path) {
+    (void)paths;
     char tmp_path[PATH_MAX];
     if (utils_join_path(final_path, ".tmp", tmp_path, sizeof(tmp_path)) != 0) {
         return -1;
