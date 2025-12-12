@@ -1010,6 +1010,13 @@ int storage_append_history(const storage_paths_t *paths,
         return -1;
     }
 
+    if (rotate_stdio_snapshot(log_dir, "last.stdout", "stdout", entry->epoch) != 0) {
+        return -1;
+    }
+    if (rotate_stdio_snapshot(log_dir, "last.stderr", "stderr", entry->epoch) != 0) {
+        return -1;
+    }
+
     char stdout_path[PATH_MAX];
     if (utils_join_path(log_dir, "last.stdout", stdout_path, sizeof(stdout_path)) != 0) {
         return -1;
