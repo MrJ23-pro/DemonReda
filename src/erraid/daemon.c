@@ -3,6 +3,8 @@
 #include "executor.h"
 #include "notifier.h"
 #include "proto.h"
+#include "storage.h"
+#include "utils.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -145,7 +147,15 @@ static int parse_json_string_token(const char **cursor, char **out) {
     return -1;
 }
 
+static int buffer_append(char *buffer, size_t cap, size_t *offset, const char *fmt, ...);
+static int send_error_response(erraid_context_t *ctx, const char *code, const char *message);
+static int send_json_response(erraid_context_t *ctx, message_type_t type, const char *payload, size_t length);
+static int send_status_ok(erraid_context_t *ctx, message_type_t type);
+static int rebuild_plan(erraid_context_t *ctx);
+static int json_extract_uint64(const char *json, const char *field, uint64_t *value);
+
 static int parse_commands_array(const char **cursor, task_type_t type, command_array_t *out_array) {
+    (void)type;
     if (cursor == NULL || *cursor == NULL || out_array == NULL) {
         errno = EINVAL;
         return -1;
