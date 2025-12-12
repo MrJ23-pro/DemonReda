@@ -840,7 +840,7 @@ static int write_task_file(const storage_paths_t *paths, const task_t *task, con
     }
 
     char line[128];
-    int n = snprintf(line, sizeof(line), "%llu\n", (unsigned long long)task->task_id);
+    n = snprintf(line, sizeof(line), "%llu\n", (unsigned long long)task->task_id);
     if (n < 0 || (size_t)n >= sizeof(line) || write_all_fd(fd, line, (size_t)n) != 0) {
         close(fd);
         unlink(tmp_path);
