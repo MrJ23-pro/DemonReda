@@ -69,11 +69,40 @@ if [ -n "$simple_task_id" ]; then
     "$tadmor_bin" -p "$pipes_dir" -e "$simple_task_id" || true
     echo "[e2e] historique tâche simple"
     "$tadmor_bin" -p "$pipes_dir" -x "$simple_task_id" || true
+
+    log_dir_simple="$rundir/logs/$simple_task_id"
+    stdout_file="$log_dir_simple/last.stdout"
+    stderr_file="$log_dir_simple/last.stderr"
+    history_file="$log_dir_simple/history.log"
+
+    if [ ! -f "$stdout_file" ]; then
+        echo "[e2e][ERREUR] stdout introuvable pour tâche $simple_task_id" >&2
+        exit 1
+    fi
+    if ! grep -q "hello end-to-end" "$stdout_file"; then
+        echo "[e2e][ERREUR] stdout ne contient pas la chaîne attendue" >&2
+        exit 1
+    fi
+    if [ ! -f "$history_file" ]; then
+        echo "[e2e][ERREUR] history.log introuvable pour tâche $simple_task_id" >&2
+        exit 1
+    fi
+    if ! grep -q "hello" "$history_file"; then
+        echo "[e2e][ERREUR] history.log ne contient pas l'entrée attendue" >&2
+        exit 1
+    fi
 fi
 
 if [ -n "$sequence_task_id" ]; then
     echo "[e2e] suppression tâche séquentielle"
     "$tadmor_bin" -p "$pipes_dir" -r "$sequence_task_id" || true
+
+    log_dir_sequence="$rundir/logs/$sequence_task_id"
+    history_seq="$log_dir_sequence/history.log"
+    if [ -f "$history_seq" ] && ! grep -q "second" "$history_seq"; then
+        echo "[e2e][ERREUR] history.log de la séquence ne contient pas 'second'" >&2
+        exit 1
+    fi
 fi
 
 if [ -n "$simple_task_id" ]; then
