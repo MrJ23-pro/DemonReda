@@ -10,6 +10,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -26,6 +27,19 @@ static int ensure_directory(const char *path, mode_t mode) {
         if (S_ISDIR(st.st_mode)) {
             return 0;
         }
+        errno = ENOTDIR;
+        return -1;
+    }
+
+    if (errno != ENOENT) {
+        return -1;
+    }
+
+    if (mkdir(path, mode) != 0) {
+        return -1;
+    }
+    return 0;
+}
 
 typedef struct {
     char *name;
@@ -462,6 +476,7 @@ static int parse_command_line(const char *line, command_t *command) {
         errno = ENOMEM;
         return -1;
     }
+    char *element = NULL;
     while (1) {
         while (*p && isspace((unsigned char)*p)) {
             ++p;
@@ -474,7 +489,6 @@ static int parse_command_line(const char *line, command_t *command) {
             goto error;
         }
         ++p;
-        char *element = NULL;
         if (parse_json_string(&p, &element) != 0) {
             goto error;
         }
@@ -498,6 +512,7 @@ static int parse_command_line(const char *line, command_t *command) {
             argv = tmp;
         }
         argv[argc++] = element;
+        element = NULL;
     }
     while (*p && isspace((unsigned char)*p)) {
         ++p;
@@ -511,7 +526,9 @@ static int parse_command_line(const char *line, command_t *command) {
     return 0;
 
 error_element:
-    free(element);
+    if (element != NULL) {
+        free(element);
+    }
 error:
     if (argv != NULL) {
         for (size_t i = 0; i < argc; ++i) {
@@ -552,7 +569,6 @@ static int parse_task_file(const char *buffer, task_t *task) {
     }
     char *lines[128];
     size_t line_count = 0;
-    char *save = content;
     char *line = content;
     while (line != NULL && *line != '\0' && line_count < 128) {
         char *newline = strchr(line, '\n');
