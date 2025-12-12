@@ -255,6 +255,14 @@ static int build_request_payload(const tadmor_options_t *opts,
                                  size_t *payload_len) {
     size_t offset = 0;
 
+    log_fd(STDERR_FILENO, "[debug tadmor] command_count=%zu\n", opts->command_count);
+    for (size_t i = 0; i < opts->command_count; ++i) {
+        log_fd(STDERR_FILENO,
+               "[debug tadmor] command %zu argc=%zu\n",
+               i,
+               opts->commands[i].argc);
+    }
+
     if (opts->opt_list) {
         *out_type = MSG_REQ_LIST_TASKS;
         if (buffer_append(payload, payload_cap, &offset, "{}") != 0) {
