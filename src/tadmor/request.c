@@ -334,52 +334,62 @@ int tadmor_parse_args(int argc, char **argv, tadmor_options_t *opts) {
             ++optind;
         }
 
-        if (current.argc > 0 || cmd_count == 0) {
+        if (current.argc > 0) {
             if (cmd_count >= capacity) {
                 capacity *= 2;
                 command_t *tmp = realloc(opts->commands, capacity * sizeof(command_t));
                 if (tmp == NULL) {
                     return -1;
                 }
-                if (!opts->has_schedule) {
-                    errno = EINVAL;
-                    return -1;
-                }
+                opts->commands = tmp;
             }
-            if (opts->opt_create_sequence) {
-                if (opts->command_count == 0) {
-                    errno = EINVAL;
-                    return -1;
-                }
-                for (size_t i = 0; i < opts->command_count; ++i) {
-                    if (opts->commands[i].argc == 0) {
-                        errno = EINVAL;
-                        return -1;
-                    }
-                }
-                if (!opts->has_schedule) {
-                    errno = EINVAL;
-                    return -1;
-                }
-            }
-            if (opts->opt_create_abstract) {
-                if (opts->command_count > 0) {
-                    for (size_t i = 0; i < opts->command_count; ++i) {
-                        if (opts->commands[i].argc == 0) {
-                            errno = EINVAL;
-                            return -1;
-                        }
-                    }
-                }
-            }
-        } else {
-            if (optind < argc) {
+            opts->commands[cmd_count++] = current;
+            opts->command_count = cmd_count;
+            current.argv = NULL;
+        } else if (cmd_count == 0) {
+            errno = EINVAL;
+            return -1;
+        }
+
+        if (current.argv != NULL) {
+            free(current.argv);
+            current.argv = NULL;
+        }
+        opts->command_count = cmd_count;
+
+        if (opts->opt_create_simple) {
+            if (!opts->has_schedule || opts->command_count != 1 || opts->commands[0].argc == 0) {
                 errno = EINVAL;
                 return -1;
             }
         }
+        if (opts->opt_create_sequence) {
+            if (!opts->has_schedule || opts->command_count == 0) {
+                errno = EINVAL;
+                return -1;
+            }
+            for (size_t i = 0; i < opts->command_count; ++i) {
+                if (opts->commands[i].argc == 0) {
+                    errno = EINVAL;
+                    return -1;
+                }
+            }
+        }
+        if (opts->opt_create_abstract) {
+            for (size_t i = 0; i < opts->command_count; ++i) {
+                if (opts->commands[i].argc == 0) {
+                    errno = EINVAL;
+                    return -1;
+                }
+            }
+        }
 
         return 0;
+    }
+
+    if (optind < argc) {
+        errno = EINVAL;
+        return -1;
     }
 
     return 0;
