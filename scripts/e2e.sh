@@ -33,6 +33,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Nettoyage éventuel d'une exécution précédente
+if [ -d "$rundir" ]; then
+    rm -rf "$rundir"
+fi
+
 mkdir -p "$rundir"
 "$erraid_bin" -r "$rundir" &
 daemon_pid=$!
