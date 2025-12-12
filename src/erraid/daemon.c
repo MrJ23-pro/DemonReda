@@ -147,12 +147,29 @@ static int parse_json_string_token(const char **cursor, char **out) {
     return -1;
 }
 
+static void log_fd(int fd, const char *fmt, ...);
 static int buffer_append(char *buffer, size_t cap, size_t *offset, const char *fmt, ...);
 static int send_error_response(erraid_context_t *ctx, const char *code, const char *message);
 static int send_json_response(erraid_context_t *ctx, message_type_t type, const char *payload, size_t length);
 static int send_status_ok(erraid_context_t *ctx, message_type_t type);
 static int rebuild_plan(erraid_context_t *ctx);
 static int json_extract_uint64(const char *json, const char *field, uint64_t *value);
+
+static void log_fd(int fd, const char *fmt, ...) {
+    char buffer[256];
+    va_list args;
+    va_start(args, fmt);
+    int written = vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+    if (written < 0) {
+        return;
+    }
+    size_t len = (size_t)written;
+    if (len >= sizeof(buffer)) {
+        len = sizeof(buffer) - 1;
+    }
+    utils_write_all(fd, buffer, len);
+}
 
 static int parse_commands_array(const char **cursor, task_type_t type, command_array_t *out_array) {
     (void)type;
@@ -426,19 +443,27 @@ schedule_parse_error:
 static int parse_commands_field(const char *payload, task_type_t type, command_array_t *out_commands) {
     const char *value_ptr = NULL;
     if (find_field_pointer(payload, "commands", &value_ptr) != 0) {
+        log_fd(STDERR_FILENO, "[debug] champ 'commands' introuvable\n");
         return -1;
     }
 
     if (parse_commands_array(&value_ptr, type, out_commands) != 0) {
+        log_fd(STDERR_FILENO, "[debug] échec parse_commands_array (errno=%d)\n", errno);
         return -1;
     }
 
     if (type == TASK_TYPE_SIMPLE && out_commands->count != 1) {
+        log_fd(STDERR_FILENO,
+               "[debug] type SIMPLE, nombre commandes=%zu (attendu 1)\n",
+               out_commands->count);
         errno = EINVAL;
         free_command_array(out_commands);
         return -1;
     }
     if (type == TASK_TYPE_SEQUENCE && out_commands->count < 1) {
+        log_fd(STDERR_FILENO,
+               "[debug] type SEQUENCE, au moins une commande requise (actuel %zu)\n",
+               out_commands->count);
         errno = EINVAL;
         free_command_array(out_commands);
         return -1;
@@ -522,6 +547,7 @@ static int handle_create_task(erraid_context_t *ctx, message_type_t msg_type, co
 
     command_array_t commands = {.commands = NULL, .count = 0};
     if (parse_commands_field(payload, type, &commands) != 0) {
+        log_fd(STDERR_FILENO, "[debug] payload reçu: %s\n", payload);
         send_error_response(ctx, "INVALID_REQUEST", "Commandes invalides");
         return -1;
     }
