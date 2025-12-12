@@ -12,6 +12,22 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+static void log_fd(int fd, const char *fmt, ...) {
+    char buffer[256];
+    va_list args;
+    va_start(args, fmt);
+    int written = vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+    if (written < 0) {
+        return;
+    }
+    size_t len = (size_t)written;
+    if (len >= sizeof(buffer)) {
+        len = sizeof(buffer) - 1;
+    }
+    utils_write_all(fd, buffer, len);
+}
+
 static int ensure_default_pipes_dir(char *buffer, size_t size) {
     const char *user = getenv("USER");
     if (user == NULL || user[0] == '\0') {
